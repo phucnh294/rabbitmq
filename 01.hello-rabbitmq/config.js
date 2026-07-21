@@ -1,5 +1,8 @@
 const dotenv = require('dotenv');
-dotenv.config();
+
+const path = require('path');
+//configure dotenv to read .env file
+dotenv.config({path: path.resolve(__dirname, '../.env')});
 
 module.exports = {
     rabbitMQ: {

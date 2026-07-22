@@ -11,6 +11,7 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
 | [01.hello-rabbitmq/](01.hello-rabbitmq/) | Single producer → single consumer | `hello` |
 | [03.competing-consumer/](03.competing-consumer/) | Single producer → multiple competing consumers (work queue) | `multiple-consumer` |
 | [02.direct-exchange/](02.direct-exchange/) | Direct exchange routing to different queues by routing key | `test-queue`, `all-messages-queue` |
+| [04.pub-sub/](04.pub-sub/) | Fanout exchange broadcasting to every bound queue | `subscriber1-queue`, `subscriber2-queue` |
 
 ### 01.hello-rabbitmq
 
@@ -28,6 +29,12 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
 - `consumer1-test.js` declares `test-queue`, binds it to the exchange with routing key `test`, and consumes only messages published with that key.
 - `consumer2-dev.js` declares `all-messages-queue`, binds it to the exchange with routing keys `dev`, `ba`, and `pm`, and consumes messages published with any of those keys.
 - Demonstrates routing-key-based fan-out: each queue only receives the messages matching the keys it's bound to, instead of every consumer getting every message.
+
+### 04.pub-sub
+
+- `publisher.js` publishes three messages to the `pub-sub-ex` **fanout exchange**, each called with a different routing-key argument (`.NET`, `Java`, `Java .NET`).
+- `subscriber1.js` and `subscriber2.js` each declare their own exclusive, auto-named queue and bind it to the exchange.
+- Because the exchange type is `fanout`, RabbitMQ ignores routing keys entirely — both subscribers receive every message published, demonstrating the broadcast / publish-subscribe pattern.
 
 ## Setup
 
@@ -55,6 +62,11 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
    node 02.direct-exchange/consumer1-test.js
    node 02.direct-exchange/consumer2-dev.js
    node 02.direct-exchange/producer.js
+   ```
+   ```
+   node 04.pub-sub/subscriber1.js
+   node 04.pub-sub/subscriber2.js
+   node 04.pub-sub/publisher.js
    ```
 
 ## Architecture
@@ -85,5 +97,16 @@ flowchart LR
         X3 -->|"key: dev, ba, pm"| Q4(("all-messages-queue"))
         Q3 --> C4[consumer1-test.js]
         Q4 --> C5[consumer2-dev.js]
+    end
+```
+
+```mermaid
+flowchart LR
+    subgraph pub-sub
+        P4["publisher.js\n(publishes 3 messages)"] -->|publish| X4{{"fanout exchange"}}
+        X4 -->|broadcast| Q5(("subscriber1-queue"))
+        X4 -->|broadcast| Q6(("subscriber2-queue"))
+        Q5 --> C6[subscriber1.js]
+        Q6 --> C7[subscriber2.js]
     end
 ```

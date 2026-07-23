@@ -1,7 +1,7 @@
 const amqp= require('amqplib');
 const config = require('./config');
 
-const subscriber = async (queuename, topic) => {
+async function subscriber(queuename, topic){
     try{
         //1. create connection
         var connection = await amqp.connect(config.rabbitMQ.url);

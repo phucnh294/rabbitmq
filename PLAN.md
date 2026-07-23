@@ -10,7 +10,7 @@ Tracks which messaging patterns have been implemented in this repo and which are
 | 2 | `02.direct-exchange/` | Routing by exact routing key | `direct` | ✅ Done |
 | 3 | `03.competing-consumer/` | Work queue, load-balanced across consumers | (default) | ✅ Done |
 | 4 | `04.pub-sub/` | Broadcast to all bound queues | `fanout` | ✅ Done |
-| 5 | `05.topic-exchange/` | Routing by wildcard pattern (`*`, `#`) on routing key | `topic` | ⬜ Planned |
+| 5 | `05.topic-exchange/` | Routing by wildcard pattern (`*`, `#`) on routing key | `topic` | ✅ Done |
 | 6 | `06.headers-exchange/` | Routing by message header match instead of routing key | `headers` | ⬜ Planned |
 | 7 | `07.rpc/` | Request/reply over RabbitMQ using a correlation ID + reply-to queue | `direct` (default) | ⬜ Planned |
 | 8 | `08.publisher-confirms/` | Reliable publishing — confirm broker received the message before moving on | any | ⬜ Planned |

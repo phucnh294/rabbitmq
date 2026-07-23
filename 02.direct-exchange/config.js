@@ -11,6 +11,7 @@ module.exports = {
         queue:{
             channel:"direct-exchange", 
             exchange_type:"direct", //define exchange type
+            exchange_name:"direct-ex-name", //define exchange name
         },
     }
 }

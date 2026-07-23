@@ -8,12 +8,13 @@ async function consumer(queuename, routingkey) {
         //2. create channel
         const channel = await connection.createChannel();
         //3. assert exchange
-        const exchangetype = config.rabbitMQ.queue.exchange_type;
-        await channel.assertExchange(exchangetype, "direct", {durable: true});
+        const exchangeType = config.rabbitMQ.queue.exchange_type;
+        const exchangeName = config.rabbitMQ.queue.exchange_name;
+        await channel.assertExchange(exchangeName,exchangeType, {durable: true});
         //4. assert queue
         const {queue} = await channel.assertQueue(queuename, {exclusive: true});
         //5. bind queue to exchange with routing key
-        await channel.bindQueue(queue, exchangetype, routingkey);
+        await channel.bindQueue(queue, exchangeType, routingkey);
         console.log(`Waiting for messages in queue: ${queue} with routing key: ${routingkey}`);
 
         //6. consume messages from queue

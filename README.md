@@ -10,7 +10,7 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
 |---|---|---|
 | [01.hello-rabbitmq/](01.hello-rabbitmq/) | Single producer → single consumer | `hello` |
 | [03.competing-consumer/](03.competing-consumer/) | Single producer → multiple competing consumers (work queue) | `multiple-consumer` |
-| [02.direct-exchange/](02.direct-exchange/) | Direct exchange routing to different queues by routing key | `test-queue`, `all-messages-queue` |
+| [02.direct-exchange/](02.direct-exchange/) | Direct exchange routing to different queues by routing key | `test-queue`, `all-others-queue` |
 | [04.pub-sub/](04.pub-sub/) | Fanout exchange broadcasting to every bound queue | `subscriber1-queue`, `subscriber2-queue` |
 | [05.topic-exchange/](05.topic-exchange/) | Topic exchange routing by wildcard pattern match on routing key | `net-topic`, `not-net-topic` |
 
@@ -28,7 +28,7 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
 
 - `producer.js` publishes to a **direct exchange** with different routing keys (`test`, `dev`, ...).
 - `consumer1-test.js` declares `test-queue`, binds it to the exchange with routing key `test`, and consumes only messages published with that key.
-- `consumer2-dev.js` declares `all-messages-queue`, binds it to the exchange with routing keys `dev`, `ba`, and `pm`, and consumes messages published with any of those keys.
+- `consumer2-dev.js` declares `all-others-queue`, binds it to the exchange with routing keys `dev`, `ba`, and `pm`, and consumes messages published with any of those keys.
 - Demonstrates routing-key-based fan-out: each queue only receives the messages matching the keys it's bound to, instead of every consumer getting every message.
 
 ### 04.pub-sub
@@ -111,7 +111,7 @@ flowchart LR
         P3[producer.js] -->|"publish (key: test)"| X3{{"direct exchange"}}
         P3 -->|"publish (key: dev)"| X3
         X3 -->|"key: test"| Q3(("test-queue"))
-        X3 -->|"key: dev, ba, pm"| Q4(("all-messages-queue"))
+        X3 -->|"key: dev, ba, pm"| Q4(("all-others-queue"))
         Q3 --> C4[consumer1-test.js]
         Q4 --> C5[consumer2-dev.js]
     end

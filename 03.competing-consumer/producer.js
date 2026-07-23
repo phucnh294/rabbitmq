@@ -15,7 +15,7 @@ const producer = async(msg)=>{
         await channel.assertQueue(channelName);
         //5. send message to queue
         await channel.sendToQueue(channelName, Buffer.from(JSON.stringify(msg)));
-        console.log(`Message sent to queue: ${channelName} : ${msg}`);
+        console.log(`Message sent to queue: ${channelName} : ${JSON.stringify(msg)}`);
 
         //6. close channel and connection
         await channel.close();

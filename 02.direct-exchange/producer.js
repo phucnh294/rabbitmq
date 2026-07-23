@@ -9,14 +9,15 @@ const producer = async (topic, msg) => {
         //2. create channel
         const channel = await connection.createChannel();
         //3. assert exchange
-        const exchangetype= config.rabbitMQ.queue.exchange_type;
-        await channel.assertExchange(exchangetype,"direct", {durable: true});
+        const exchangeType= config.rabbitMQ.queue.exchange_type;
+        const exchangeName= config.rabbitMQ.queue.exchange_name;
+        await channel.assertExchange(exchangeName,exchangeType, {durable: true});
 
         //4. send message to exchange with routing key
-        channel.publish(exchangetype, topic, Buffer.from(JSON.stringify(msg)));
+        channel.publish(exchangeType, topic, Buffer.from(JSON.stringify(msg)));
 
         //log
-        console.log(`Message sent to exchange: ${exchangetype} with routing key: ${topic} , message : ${JSON.stringify(msg)}` );
+        console.log(`Message sent to exchange: ${exchangeType} with routing key: ${topic} , message : ${JSON.stringify(msg)}` );
 
         //5. close channel and connection
         await channel.close();

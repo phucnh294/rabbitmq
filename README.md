@@ -13,6 +13,7 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
 | [02.direct-exchange/](02.direct-exchange/) | Direct exchange routing to different queues by routing key | `test-queue`, `all-others-queue` |
 | [04.pub-sub/](04.pub-sub/) | Fanout exchange broadcasting to every bound queue | `subscriber1-queue`, `subscriber2-queue` |
 | [05.topic-exchange/](05.topic-exchange/) | Topic exchange routing by wildcard pattern match on routing key | `net-topic`, `not-net-topic` |
+| [06.header-exchange/](06.header-exchange/) | Headers exchange routing by message-header match instead of routing key | `male.queue` |
 
 ### 01.hello-rabbitmq
 
@@ -47,6 +48,18 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
   - `#` (hash) matches **zero or more** words.
   - Any other segment must match literally (e.g. `C#`, `Java`).
 - Unlike `direct` (exact match only) or `fanout` (no matching, broadcast to all), `topic` lets each binding express a pattern, so a single exchange can support both narrow and broad subscriptions at once.
+
+### 06.header-exchange
+
+- `producer.js` publishes to the `header_exchange` **headers exchange** with an empty routing key (`""`) — a headers exchange ignores the routing key completely. Each message carries a `gender` header instead (`{gender: "male"}` for "Martin", `{gender: "female"}` for "Queenie").
+- `consumer1.js` declares `male.queue` and binds it with header-match arguments `{gender: "male", "x-match": "all"}`, so it only receives messages whose `gender` header is exactly `"male"`.
+- `consumer2.js` is a stub (not implemented yet) — the plan is to bind `female.queue` on `gender: "female"`, or use it to demonstrate `x-match: "any"` matching across multiple header keys.
+
+**Things that must be right for a headers exchange to work** (found by debugging why `consumer1.js` initially received nothing):
+- **The binding's 4th argument (`args`) *is* the header-match table itself** — e.g. `{gender: "male", "x-match": "all"}` — **not** `{headers: {gender: "male"}}`. That `{headers: {...}}` shape is only correct for `channel.publish`'s options object (which sets the message's real `headers` property). Passed to `bindQueue` instead, it creates a binding that looks for a header literally named `"headers"`, which no message ever has, so the binding silently matches nothing.
+- **`x-match` controls the matching mode**: `"all"` (default if omitted) requires every key in the binding args, other than `x-match` itself, to match the message's headers; `"any"` requires just one key to match.
+- Bindings are stored per-queue on the broker. If you fix binding arguments in code but the queue already exists with the old (broken) binding, you must delete the queue (or use a new queue name) — declaring the same queue again does not replace its existing bindings.
+- Headers exchanges are useful when routing depends on multiple independent attributes at once (e.g. `gender` + `region` + `priority`) rather than one hierarchical string like a topic exchange's routing key.
 
 ## Setup
 
@@ -84,6 +97,10 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
    node 05.topic-exchange/consumer1.js
    node 05.topic-exchange/consumer2.js
    node 05.topic-exchange/producer.js
+   ```
+   ```
+   node 06.header-exchange/consumer1.js
+   node 06.header-exchange/producer.js
    ```
 
 ## Architecture
@@ -139,5 +156,15 @@ flowchart LR
         X5 -->|"pattern: everything.#"| Q8
         Q7 --> C8[consumer1.js]
         Q8 --> C9[consumer2.js]
+    end
+```
+
+```mermaid
+flowchart LR
+    subgraph header-exchange
+        P6["producer.js\n(publish, routing key: \"\")"] -->|"headers: {gender: male}"| X6{{"headers exchange"}}
+        P6 -->|"headers: {gender: female}"| X6
+        X6 -->|"match: gender=male, x-match=all"| Q9(("male.queue"))
+        Q9 --> C10[consumer1.js]
     end
 ```

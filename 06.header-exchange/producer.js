@@ -14,7 +14,7 @@ async function header_producer(header, msg){
         await channel.assertExchange(exchangeName, exchangeType, {durable :true});
 
         const headers= {
-            sex:header,
+            gender:header,
             "country":"usa"
         }
 

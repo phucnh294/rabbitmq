@@ -14,6 +14,7 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
 | [04.pub-sub/](04.pub-sub/) | Fanout exchange broadcasting to every bound queue | `subscriber1-queue`, `subscriber2-queue` |
 | [05.topic-exchange/](05.topic-exchange/) | Topic exchange routing by wildcard pattern match on routing key | `net-topic`, `not-net-topic` |
 | [06.header-exchange/](06.header-exchange/) | Headers exchange routing by message-header match instead of routing key | `male.queue` |
+| [07.rpc/](07.rpc/) | Request/reply (RPC) over RabbitMQ using `correlationId` + a reply-to queue | `rpc_queue`, client's exclusive reply queue |
 
 ### 01.hello-rabbitmq
 
@@ -61,6 +62,27 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
 - Bindings are stored per-queue on the broker. If you fix binding arguments in code but the queue already exists with the old (broken) binding, you must delete the queue (or use a new queue name) — declaring the same queue again does not replace its existing bindings.
 - Headers exchanges are useful when routing depends on multiple independent attributes at once (e.g. `gender` + `region` + `priority`) rather than one hierarchical string like a topic exchange's routing key.
 
+### 07.rpc
+
+Request/reply (RPC) pattern: a client sends a request and awaits a reply on its own private queue, correlating requests to replies by a `correlationId` instead of blocking a single connection.
+
+- `server/server.js` connects, wires up `server/producer.js` (sends replies) and `server/consumer.js` (receives requests), then waits on the shared `rpc_queue`.
+- `server/consumer.js` reads the requested operation from the message's `function` header, computes it (currently `fibonacci(n)`, iterative), and hands the result to `server/producer.js` to send back.
+- `client/client.js` connects, declares its own exclusive, auto-named reply queue, wires up `client/consumer.js` (receives replies) and `client/producer.js` (sends requests), then requests `fibonacci(n)` (`n` from `process.argv[2]`, default `10`) and awaits the result.
+- `client/producer.js` publishes to `rpc_queue` with `replyTo: <its reply queue>`, a fresh `correlationId`, and a `function` header; it returns a `Promise` that resolves when a reply with the same `correlationId` arrives (or rejects after a 10s timeout with no reply).
+- `client/consumer.js` consumes the reply queue and emits an event named after the `correlationId` on a shared `EventEmitter`, which is what resolves the matching pending request's `Promise`.
+- Unlike every other example here, this one is request/response, not fire-and-forget — the client actively waits for an answer instead of just publishing and moving on.
+
+Run it with:
+```
+node 07.rpc/server/server.js
+node 07.rpc/client/client.js 10
+```
+
+**Gotchas found while building this one:**
+- RabbitMQ 4.x deprecated non-durable, non-exclusive queues (`transient_nonexcl_queues`) — declaring `rpc_queue` with `{durable: false}` now gets rejected with a `541 INTERNAL-ERROR`. Both the client and server declare it `{durable: true}` instead.
+- `client/config.js` and `server/config.js` live one directory deeper (`07.rpc/client/`, `07.rpc/server/`) than every other folder's `config.js` — `path.resolve(__dirname, '../../.env')` is needed to reach the project-root `.env`, not `'../.env'` (which would silently resolve to a nonexistent `07.rpc/.env`, leaving credentials `undefined`).
+
 ## Setup
 
 1. Have a RabbitMQ server running locally (default: `amqp://localhost`, no vhost).
@@ -101,6 +123,10 @@ Small Node.js examples exploring core RabbitMQ messaging patterns with [amqplib]
    ```
    node 06.header-exchange/consumer1.js
    node 06.header-exchange/producer.js
+   ```
+   ```
+   node 07.rpc/server/server.js
+   node 07.rpc/client/client.js 10
    ```
 
 ## Architecture
@@ -166,5 +192,15 @@ flowchart LR
         P6 -->|"headers: {gender: female}"| X6
         X6 -->|"match: gender=male, x-match=all"| Q9(("male.queue"))
         Q9 --> C10[consumer1.js]
+    end
+```
+
+```mermaid
+flowchart LR
+    subgraph rpc
+        Cl["client.js\n(fibonacci(10) request)"] -->|"publish (replyTo, correlationId)"| Q10(("rpc_queue"))
+        Q10 --> Sv["server.js\n(computes fibonacci)"]
+        Sv -->|"reply (correlationId)"| Q11(("client's reply queue"))
+        Q11 --> Cl
     end
 ```
